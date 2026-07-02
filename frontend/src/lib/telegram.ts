@@ -20,21 +20,6 @@ export type TelegramContext = {
   initData: string;
   user: TelegramUser | null;
   startParam: string | null;
-  isMock: boolean;
-};
-
-const MOCK: TelegramContext = {
-  initData: "mock-init-data",
-  user: {
-    id: 4242,
-    first_name: "Aperçu",
-    last_name: "Lovable",
-    username: "preview_user",
-    photo_url: "",
-    language_code: "fr",
-  },
-  startParam: null,
-  isMock: true,
 };
 
 let cached: TelegramContext | null = null;
@@ -55,15 +40,10 @@ export function initTelegram() {
 export function getTelegramContext(): TelegramContext {
   if (cached) return cached;
   const wa = window.Telegram?.WebApp;
-  if (!wa || !wa.initData) {
-    cached = MOCK;
-    return cached;
-  }
   cached = {
-    initData: wa.initData,
-    user: wa.initDataUnsafe?.user ?? null,
-    startParam: wa.initDataUnsafe?.start_param ?? null,
-    isMock: false,
+    initData: wa?.initData ?? "",
+    user: wa?.initDataUnsafe?.user ?? null,
+    startParam: wa?.initDataUnsafe?.start_param ?? null,
   };
   return cached;
 }
