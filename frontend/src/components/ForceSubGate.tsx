@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 import { LockKeyhole, ExternalLink, RefreshCw } from "lucide-react";
 import { api } from "@/lib/api";
+import { useAuth } from "@/lib/auth-context";
 import { Button } from "@/components/ui/button";
 import { openTelegramLink } from "@/lib/telegram";
 
@@ -8,24 +9,29 @@ const CHANNEL_URL = import.meta.env.VITE_CHANNEL_URL ?? "https://t.me/";
 const CHANNEL_NAME = import.meta.env.VITE_CHANNEL_NAME ?? "CLUB JM";
 
 export default function ForceSubGate({ children }: { children: React.ReactNode }) {
+  const { isMember: contextIsMember, setIsMember: setContextIsMember } = useAuth();
   const [state, setState] = useState<"checking" | "ok" | "blocked">("checking");
   const [error, setError] = useState<string | null>(null);
 
-  const check = useCallback(async () => {
+  // Verification deja faite en meme temps que l'auth (voir AuthProvider) :
+  // pas besoin d'un aller-retour reseau supplementaire au premier chargement.
+  useEffect(() => {
+    if (contextIsMember === null) return;
+    setState(contextIsMember ? "ok" : "blocked");
+  }, [contextIsMember]);
+
+  const recheck = useCallback(async () => {
     setState("checking");
     setError(null);
     try {
       const { is_member } = await api.forcesubCheck();
+      setContextIsMember(is_member);
       setState(is_member ? "ok" : "blocked");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur");
       setState("blocked");
     }
-  }, []);
-
-  useEffect(() => {
-    void check();
-  }, [check]);
+  }, [setContextIsMember]);
 
   if (state === "checking") {
     return (
@@ -64,7 +70,7 @@ export default function ForceSubGate({ children }: { children: React.ReactNode }
           <Button
             size="lg"
             variant="secondary"
-            onClick={() => void check()}
+            onClick={() => void recheck()}
             className="w-full"
           >
             <RefreshCw className="h-4 w-4" />

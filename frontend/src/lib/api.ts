@@ -13,8 +13,8 @@ import type {
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 
 /**
- * Centralized endpoint map. Renaming a backend route = one line here.
- * Toutes les routes backend vivent sous le préfixe /api (voir app/api.py, router = APIRouter(prefix="/api")).
+ * Centralized endpoint map. Toutes les routes backend vivent sous le prefixe
+ * /api (voir app/api.py, router = APIRouter(prefix="/api")).
  */
 export const ENDPOINTS = {
   authTelegram: "/api/auth/telegram",
@@ -96,10 +96,13 @@ function safeJson(text: string): unknown {
 
 export const api = {
   async authTelegram(initData: string, startParam: string | null) {
-    return request<{ token: string; profile: Profile }>(ENDPOINTS.authTelegram, {
-      method: "POST",
-      json: { init_data: initData, start_param: startParam },
-    });
+    return request<{ token: string; profile: Profile; is_member: boolean }>(
+      ENDPOINTS.authTelegram,
+      {
+        method: "POST",
+        json: { init_data: initData, start_param: startParam },
+      },
+    );
   },
 
   async me() {

@@ -15,6 +15,8 @@ type AuthState = {
   status: "idle" | "loading" | "ready" | "error";
   profile: Profile | null;
   error: string | null;
+  isMember: boolean | null;
+  setIsMember: (v: boolean) => void;
   refresh: () => Promise<void>;
   retryAuth: () => Promise<void>;
 };
@@ -25,6 +27,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [status, setStatus] = useState<AuthState["status"]>("loading");
   const [error, setError] = useState<string | null>(null);
+  const [isMember, setIsMember] = useState<boolean | null>(null);
 
   const refresh = useCallback(async () => {
     try {
@@ -40,7 +43,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
     try {
       const ctx = getTelegramContext();
-      const { token, profile: p } = await api.authTelegram(ctx.initData, ctx.startParam);
+      const { token, profile: p, is_member } = await api.authTelegram(ctx.initData, ctx.startParam);
       setAuthToken(token);
       // Merge Telegram initData user fields (photo_url, names, username)
       // when the backend hasn't returned them yet — gives instant UI feel.
@@ -51,6 +54,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         photo_url: p.photo_url || ctx.user?.photo_url || "",
       };
       setProfile(merged);
+      setIsMember(is_member);
       setStatus("ready");
     } catch (e) {
       setError(e instanceof Error ? e.message : "Erreur d'authentification");
@@ -63,8 +67,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }, [authenticate]);
 
   const value = useMemo<AuthState>(
-    () => ({ status, profile, error, refresh, retryAuth: authenticate }),
-    [status, profile, error, refresh, authenticate],
+    () => ({ status, profile, error, isMember, setIsMember, refresh, retryAuth: authenticate }),
+    [status, profile, error, isMember, refresh, authenticate],
   );
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>;
