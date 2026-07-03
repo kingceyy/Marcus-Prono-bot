@@ -9,28 +9,31 @@ import type {
   UserClass,
   VipInfo,
 } from "./types";
+import { MOCK_DB, mockAuth } from "./mock";
+import { getTelegramContext } from "./telegram";
 
 const BASE_URL = (import.meta.env.VITE_API_BASE_URL ?? "").replace(/\/$/, "");
 
 /**
- * Centralized endpoint map. Toutes les routes backend vivent sous le prefixe
- * /api (voir app/api.py, router = APIRouter(prefix="/api")).
+ * Centralized endpoint map. Renaming a backend route = one line here.
  */
 export const ENDPOINTS = {
-  authTelegram: "/api/auth/telegram",
-  me: "/api/me",
-  coupons: "/api/coupons",
-  couponsHistory: "/api/coupons/history",
-  leaderboard: "/api/leaderboard",
-  referees: "/api/referees",
-  vip: "/api/vip",
-  vipPurchase: "/api/vip/purchase",
-  forcesubCheck: "/api/forcesub/check",
-  adminCoupons: "/api/admin/coupons",
-  adminCouponValidate: (id: string) => `/api/admin/coupons/${id}/validate`,
-  adminUsers: "/api/admin/users",
-  adminUser: (id: number) => `/api/admin/users/${id}`,
-  adminStats: "/api/admin/stats",
+  authTelegram: "/auth/telegram",
+  me: "/me",
+  coupons: "/coupons",
+  couponsHistory: "/coupons/history",
+  leaderboard: "/leaderboard",
+  referees: "/referees",
+  vip: "/vip",
+  vipPurchase: "/vip/purchase",
+  forcesubCheck: "/forcesub/check",
+  adminCoupons: "/admin/coupons",
+  adminCouponValidate: (id: string) => `/admin/coupons/${id}/validate`,
+  adminCouponUnvalidate: (id: string) => `/admin/coupons/${id}/unvalidate`,
+  adminCouponDelete: (id: string) => `/admin/coupons/${id}`,
+  adminUsers: "/admin/users",
+  adminUser: (id: number) => `/admin/users/${id}`,
+  adminStats: "/admin/stats",
 } as const;
 
 export class ApiError extends Error {
@@ -48,16 +51,15 @@ export function setAuthToken(token: string | null) {
   bearerToken = token;
 }
 
+function isMockMode(): boolean {
+  if (!BASE_URL) return true;
+  return getTelegramContext().isMock;
+}
+
 async function request<T>(
   path: string,
   init: RequestInit & { json?: unknown } = {},
 ): Promise<T> {
-  if (!BASE_URL) {
-    throw new ApiError(
-      "VITE_API_BASE_URL n'est pas configurée. Définissez-la dans les variables d'environnement du frontend.",
-      0,
-    );
-  }
   const { json, headers, ...rest } = init;
   const res = await fetch(`${BASE_URL}${path}`, {
     ...rest,
@@ -96,44 +98,50 @@ function safeJson(text: string): unknown {
 
 export const api = {
   async authTelegram(initData: string, startParam: string | null) {
-    return request<{ token: string; profile: Profile; is_member: boolean }>(
-      ENDPOINTS.authTelegram,
-      {
-        method: "POST",
-        json: { init_data: initData, start_param: startParam },
-      },
-    );
+    if (isMockMode()) return mockAuth(startParam);
+    return request<{ token: string; profile: Profile }>(ENDPOINTS.authTelegram, {
+      method: "POST",
+      json: { init_data: initData, start_param: startParam },
+    });
   },
 
   async me() {
+    if (isMockMode()) return MOCK_DB.profile();
     return request<Profile>(ENDPOINTS.me);
   },
 
   async coupons() {
+    if (isMockMode()) return MOCK_DB.coupons();
     return request<Coupon[]>(ENDPOINTS.coupons);
   },
 
   async couponsHistory() {
+    if (isMockMode()) return MOCK_DB.history();
     return request<HistoryEntry[]>(ENDPOINTS.couponsHistory);
   },
 
   async leaderboard() {
+    if (isMockMode()) return MOCK_DB.leaderboard();
     return request<LeaderboardEntry[]>(ENDPOINTS.leaderboard);
   },
 
   async referees() {
+    if (isMockMode()) return MOCK_DB.referees();
     return request<Referee[]>(ENDPOINTS.referees);
   },
 
   async vip() {
+    if (isMockMode()) return MOCK_DB.vip();
     return request<VipInfo>(ENDPOINTS.vip);
   },
 
   async vipPurchase() {
+    if (isMockMode()) return { redirect_url: "https://t.me/" };
     return request<{ redirect_url: string }>(ENDPOINTS.vipPurchase, { method: "POST" });
   },
 
   async forcesubCheck() {
+    if (isMockMode()) return { is_member: MOCK_DB.forceSubState() };
     return request<{ is_member: boolean }>(ENDPOINTS.forcesubCheck, { method: "POST" });
   },
 
@@ -146,16 +154,33 @@ export const api = {
     expires_at: string | null;
     quantity: number | null;
   }) {
+    if (isMockMode()) return MOCK_DB.adminCreateCoupon(payload);
     return request<Coupon>(ENDPOINTS.adminCoupons, { method: "POST", json: payload });
   },
 
   async adminValidateCoupon(id: string) {
-    return request<{ ok: true }>(ENDPOINTS.adminCouponValidate(id), {
+    if (isMockMode()) return MOCK_DB.adminValidateCoupon(id);
+    return request<Coupon>(ENDPOINTS.adminCouponValidate(id), {
       method: "PATCH",
     });
   },
 
+  async adminUnvalidateCoupon(id: string) {
+    if (isMockMode()) return MOCK_DB.adminUnvalidateCoupon(id);
+    return request<Coupon>(ENDPOINTS.adminCouponUnvalidate(id), {
+      method: "PATCH",
+    });
+  },
+
+  async adminDeleteCoupon(id: string) {
+    if (isMockMode()) return MOCK_DB.adminDeleteCoupon(id);
+    return request<{ ok: true }>(ENDPOINTS.adminCouponDelete(id), {
+      method: "DELETE",
+    });
+  },
+
   async adminUsers() {
+    if (isMockMode()) return MOCK_DB.adminUsers();
     return request<AdminUserRow[]>(ENDPOINTS.adminUsers);
   },
 
@@ -163,6 +188,7 @@ export const api = {
     id: number,
     payload: { user_class?: UserClass; is_vip?: boolean },
   ) {
+    if (isMockMode()) return MOCK_DB.adminUpdateUser(id, payload);
     return request<AdminUserRow>(ENDPOINTS.adminUser(id), {
       method: "PATCH",
       json: payload,
@@ -170,6 +196,7 @@ export const api = {
   },
 
   async adminStats() {
+    if (isMockMode()) return MOCK_DB.adminStats();
     return request<AdminStats>(ENDPOINTS.adminStats);
   },
 };

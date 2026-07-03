@@ -1,6 +1,6 @@
 import { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
-import { ArrowLeft, CheckCircle2, Plus, Users } from "lucide-react";
+import { ArrowLeft, CheckCircle2, Plus, Trash2, Users } from "lucide-react";
 import { toast } from "sonner";
 import { api } from "@/lib/api";
 import type { AdminStats, AdminUserRow, Coupon, UserClass } from "@/lib/types";
@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Input, Textarea } from "@/components/ui/input";
 import { Label, Select } from "@/components/ui/label";
 import { Skeleton } from "@/components/ui/skeleton";
+import { Badge } from "@/components/ui/badge";
 import { ClassBadge, VipBadge } from "@/components/ClassBadge";
 
 export default function Admin() {
@@ -154,16 +155,39 @@ function CreateCoupon() {
 
 function ManageCoupons() {
   const [rows, setRows] = useState<Coupon[] | null>(null);
+  const [busyId, setBusyId] = useState<string | null>(null);
   const load = () => void api.coupons().then(setRows);
   useEffect(load, []);
 
-  const validate = async (id: string) => {
+  const toggleValidate = async (c: Coupon) => {
+    setBusyId(c.id);
     try {
-      await api.adminValidateCoupon(id);
-      toast.success("Coupon validé");
+      if (c.is_validated) {
+        await api.adminUnvalidateCoupon(c.id);
+        toast.success("Validation retirée");
+      } else {
+        await api.adminValidateCoupon(c.id);
+        toast.success("Coupon validé");
+      }
       load();
     } catch (e) {
       toast.error(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBusyId(null);
+    }
+  };
+
+  const remove = async (c: Coupon) => {
+    if (!window.confirm(`Supprimer définitivement le coupon "${c.code}" ?`)) return;
+    setBusyId(c.id);
+    try {
+      await api.adminDeleteCoupon(c.id);
+      toast.success("Coupon supprimé");
+      load();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Erreur");
+    } finally {
+      setBusyId(null);
     }
   };
 
@@ -177,21 +201,54 @@ function ManageCoupons() {
         <li key={c.id}>
           <Card className="fade-up">
             <CardContent className="flex items-start gap-3">
-              <img
-                src={c.image_url}
-                alt=""
-                className="h-14 w-14 shrink-0 rounded-lg object-cover"
-              />
+              <div className="relative h-14 w-14 shrink-0 overflow-hidden rounded-lg">
+                <img
+                  src={c.image_url}
+                  alt=""
+                  className="h-full w-full object-cover"
+                />
+                {c.is_validated && (
+                  <div className="pointer-events-none absolute inset-0 flex items-center justify-center bg-background/40">
+                    <span className="-rotate-12 select-none rounded border border-primary px-1 text-[9px] font-extrabold uppercase tracking-wider text-primary">
+                      Validé
+                    </span>
+                  </div>
+                )}
+              </div>
               <div className="min-w-0 flex-1">
-                <p className="truncate text-sm font-semibold">{c.text}</p>
+                <div className="flex items-center gap-1.5">
+                  <p className="truncate text-sm font-semibold">{c.text}</p>
+                  {c.is_validated && (
+                    <Badge variant="primary">
+                      <CheckCircle2 className="h-3 w-3" />
+                      Validé
+                    </Badge>
+                  )}
+                </div>
                 <p className="text-xs text-muted-foreground">
                   <span className="font-mono">{c.code}</span> · min {c.min_class}
                 </p>
               </div>
-              <Button size="sm" variant="secondary" onClick={() => validate(c.id)}>
-                <CheckCircle2 className="h-4 w-4" />
-                Valider
-              </Button>
+              <div className="flex shrink-0 flex-col gap-1.5">
+                <Button
+                  size="sm"
+                  variant={c.is_validated ? "secondary" : "primary"}
+                  disabled={busyId === c.id}
+                  onClick={() => toggleValidate(c)}
+                >
+                  <CheckCircle2 className="h-4 w-4" />
+                  {c.is_validated ? "Dévalider" : "Valider"}
+                </Button>
+                <Button
+                  size="sm"
+                  variant="destructive"
+                  disabled={busyId === c.id}
+                  onClick={() => remove(c)}
+                >
+                  <Trash2 className="h-4 w-4" />
+                  Supprimer
+                </Button>
+              </div>
             </CardContent>
           </Card>
         </li>

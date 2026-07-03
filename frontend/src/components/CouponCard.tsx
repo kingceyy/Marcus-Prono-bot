@@ -1,24 +1,16 @@
 import { useState } from "react";
-import { Check, Copy, Lock, Clock, Package } from "lucide-react";
+import { Check, Copy, Lock, Clock, Package, ShieldCheck } from "lucide-react";
 import { toast } from "sonner";
 import { Card } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { CouponMedia } from "@/components/CouponMedia";
 import type { Coupon } from "@/lib/types";
 import { formatDate } from "@/lib/format";
 import { cn } from "@/lib/utils";
 
-export function CouponCard({
-  coupon,
-  onOpenDetail,
-}: {
-  coupon: Coupon;
-  onOpenDetail?: (coupon: Coupon) => void;
-}) {
+export function CouponCard({ coupon }: { coupon: Coupon }) {
   const [copied, setCopied] = useState(false);
 
-  const copy = async (e: React.MouseEvent) => {
-    e.stopPropagation();
+  const copy = async () => {
     try {
       await navigator.clipboard.writeText(coupon.code);
       setCopied(true);
@@ -31,34 +23,36 @@ export function CouponCard({
 
   return (
     <Card
-      onClick={() => onOpenDetail?.(coupon)}
       className={cn(
         "group overflow-hidden transition-all duration-300",
-        onOpenDetail && "cursor-pointer",
         coupon.locked
           ? "opacity-95"
           : "hover:-translate-y-0.5 hover:border-primary/40 hover:shadow-[0_18px_50px_-22px_oklch(0.74_0.19_145/0.6)]",
       )}
     >
-      <CouponMedia
-        url={coupon.image_url}
-        variant="thumbnail"
-        className={cn(
-          "transition-all duration-700",
-          coupon.locked ? "blur-md scale-110" : "group-hover:scale-105",
-        )}
-      >
+      <div className="relative h-40 w-full overflow-hidden bg-muted">
+        <img
+          src={coupon.image_url}
+          alt=""
+          className={cn(
+            "h-full w-full object-cover transition-all duration-700",
+            coupon.locked ? "blur-md scale-110" : "group-hover:scale-105",
+          )}
+          loading="lazy"
+        />
         <div
           aria-hidden
-          className="absolute inset-0"
+          className="pointer-events-none absolute inset-0"
           style={{
             background:
               "linear-gradient(180deg, transparent 40%, rgba(5,6,5,0.85) 100%)",
           }}
         />
         {!coupon.locked && (
-          <div className="absolute inset-0 overflow-hidden">
-            <div className="absolute -inset-y-4 -left-1/3 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/15 to-transparent opacity-0 transition-all duration-700 group-hover:translate-x-[420%] group-hover:opacity-100" />
+          <div className="pointer-events-none absolute inset-0 overflow-hidden">
+            <div
+              className="absolute -inset-y-4 -left-1/3 w-1/3 -skew-x-12 bg-gradient-to-r from-transparent via-white/15 to-transparent opacity-0 transition-all duration-700 group-hover:translate-x-[420%] group-hover:opacity-100"
+            />
           </div>
         )}
         {coupon.locked && (
@@ -71,10 +65,26 @@ export function CouponCard({
             </p>
           </div>
         )}
-      </CouponMedia>
+        {coupon.is_validated && !coupon.locked && (
+          <div
+            aria-hidden
+            className="pointer-events-none absolute inset-0 flex items-center justify-center"
+          >
+            <span className="-rotate-12 select-none rounded-lg border-[3px] border-primary/80 px-4 py-1.5 text-lg font-extrabold uppercase tracking-widest text-primary/90 shadow-[0_0_20px_-4px_oklch(0.74_0.19_145/0.7)]">
+              Validé
+            </span>
+          </div>
+        )}
+      </div>
       <div className="space-y-3 p-4">
         <div className="flex flex-wrap items-center gap-1.5">
           <Badge variant="primary">{coupon.min_class}</Badge>
+          {coupon.is_validated && (
+            <Badge variant="primary">
+              <ShieldCheck className="h-3 w-3" />
+              Validé
+            </Badge>
+          )}
           {coupon.expires_at && (
             <Badge variant="muted">
               <Clock className="h-3 w-3" />

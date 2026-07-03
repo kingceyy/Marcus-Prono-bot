@@ -42,6 +42,7 @@ export type Coupon = {
   expires_at: string | null;
   quantity_left: number | null;
   locked: boolean;
+  is_validated: boolean;
   created_at: string;
 };
 
