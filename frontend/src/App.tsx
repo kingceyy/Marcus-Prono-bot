@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import { Navigate, Route, Routes, useLocation } from "react-router-dom";
 import { Toaster } from "sonner";
 import { AuthProvider, useAuth } from "@/lib/auth-context";
+import { ThemeProvider, useTheme } from "@/lib/theme-context";
 import { initTelegram } from "@/lib/telegram";
 import AuthGate from "@/components/AuthGate";
 import ForceSubGate from "@/components/ForceSubGate";
@@ -56,29 +57,45 @@ function Shell() {
   );
 }
 
+function AppToaster() {
+  const { theme } = useTheme();
+  return (
+    <Toaster
+      theme={theme}
+      position="top-center"
+      toastOptions={{
+        style:
+          theme === "light"
+            ? {
+                background: "#ffffff",
+                border: "1px solid #e2d9c3",
+                color: "#1a1712",
+              }
+            : {
+                background: "#0f1310",
+                border: "1px solid #1d231f",
+                color: "#f5f5f5",
+              },
+      }}
+    />
+  );
+}
+
 export default function App() {
   useEffect(() => {
     initTelegram();
   }, []);
 
   return (
-    <AuthProvider>
-      <AuthGate>
-        <ForceSubGate>
-          <Shell />
-        </ForceSubGate>
-      </AuthGate>
-      <Toaster
-        theme="dark"
-        position="top-center"
-        toastOptions={{
-          style: {
-            background: "#0f1310",
-            border: "1px solid #1d231f",
-            color: "#f5f5f5",
-          },
-        }}
-      />
-    </AuthProvider>
+    <ThemeProvider>
+      <AuthProvider>
+        <AuthGate>
+          <ForceSubGate>
+            <Shell />
+          </ForceSubGate>
+        </AuthGate>
+        <AppToaster />
+      </AuthProvider>
+    </ThemeProvider>
   );
 }

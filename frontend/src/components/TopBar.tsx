@@ -1,12 +1,20 @@
 import { Link } from "react-router-dom";
 import { CircleUser } from "lucide-react";
 import { useAuth } from "@/lib/auth-context";
+import { useTheme } from "@/lib/theme-context";
+import ThemeToggle from "@/components/ThemeToggle";
 
 export default function TopBar() {
   const { profile } = useAuth();
+  const { theme } = useTheme();
   return (
     <header className="sticky top-0 z-30 flex items-center justify-between border-b border-border/60 px-4 py-3 backdrop-blur-xl"
-      style={{ background: "linear-gradient(180deg, rgba(5,6,5,.85), rgba(5,6,5,.55))" }}
+      style={{
+        background:
+          theme === "light"
+            ? "linear-gradient(180deg, rgba(250,246,236,.9), rgba(250,246,236,.6))"
+            : "linear-gradient(180deg, rgba(5,6,5,.85), rgba(5,6,5,.55))",
+      }}
     >
       <Link to="/" className="group flex items-center gap-2.5">
         <div className="relative">
@@ -29,20 +37,23 @@ export default function TopBar() {
           </span>
         </div>
       </Link>
-      <Link
-        to="/profile"
-        aria-label="Profil"
-        className="group relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-border bg-card transition hover:border-primary/60 hover:ring-glow"
-      >
-        {profile?.photo_url ? (
-          <img src={profile.photo_url} alt="" className="h-full w-full object-cover transition group-hover:scale-110" />
-        ) : (
-          <CircleUser className="h-5 w-5 text-muted-foreground" />
-        )}
-        {profile?.is_vip && (
-          <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background bg-primary" />
-        )}
-      </Link>
+      <div className="flex items-center gap-2">
+        <ThemeToggle />
+        <Link
+          to="/profile"
+          aria-label="Profil"
+          className="group relative flex h-10 w-10 items-center justify-center overflow-hidden rounded-full border border-border bg-card transition hover:border-primary/60 hover:ring-glow"
+        >
+          {profile?.photo_url ? (
+            <img src={profile.photo_url} alt="" className="h-full w-full object-cover transition group-hover:scale-110" />
+          ) : (
+            <CircleUser className="h-5 w-5 text-muted-foreground" />
+          )}
+          {profile?.is_vip && (
+            <span className="absolute -bottom-0.5 -right-0.5 h-3 w-3 rounded-full border-2 border-background bg-primary" />
+          )}
+        </Link>
+      </div>
     </header>
   );
 }
