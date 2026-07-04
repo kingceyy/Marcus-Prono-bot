@@ -54,7 +54,7 @@ async function request<T>(
   init: RequestInit & { json?: unknown } = {},
 ): Promise<T> {
   const { json, headers, ...rest } = init;
-  const res = await fetch(`${BASE_URL}${path}`, {
+  const res = await fetch(`${BASE_URL}/api${path}`, {
     ...rest,
     headers: {
       "Content-Type": "application/json",
